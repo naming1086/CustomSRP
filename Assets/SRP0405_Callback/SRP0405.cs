@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 [ExecuteInEditMode]
-public class SRP0405 : RenderPipelineAsset
+public class SRP0405 : RenderPipelineAsset<SRP0405Instance>
 {
     #if UNITY_EDITOR
     [UnityEditor.MenuItem("Assets/Create/Render Pipeline/SRP0405", priority = 1)]
@@ -83,7 +83,10 @@ public class SRP0405Instance : RenderPipeline
             FilteringSettings filterSettings = new FilteringSettings(RenderQueueRange.all);
 
             //Skybox
-            if(drawSkyBox)  {  context.DrawSkybox(camera);  }
+            if(drawSkyBox)
+            {
+                CustomSRPUtil.RenderSkybox(context, camera);
+            }
 
             //Callback
             AfterSkybox(camera,context);
@@ -92,7 +95,7 @@ public class SRP0405Instance : RenderPipeline
             sortingSettings.criteria = SortingCriteria.CommonOpaque;
             drawSettings.sortingSettings = sortingSettings;
             filterSettings.renderQueueRange = RenderQueueRange.opaque;
-            context.DrawRenderers(cull, ref drawSettings, ref filterSettings);
+            CustomSRPUtil.RenderObjects("Render Opaque Objects", context, cull, filterSettings, drawSettings);
 
             //Callback
             AfterOpaqueObject(camera,context);
@@ -101,7 +104,7 @@ public class SRP0405Instance : RenderPipeline
             sortingSettings.criteria = SortingCriteria.CommonTransparent;
             drawSettings.sortingSettings = sortingSettings;
             filterSettings.renderQueueRange = RenderQueueRange.transparent;
-            context.DrawRenderers(cull, ref drawSettings, ref filterSettings);
+            CustomSRPUtil.RenderObjects("Render Transparent Objects", context, cull, filterSettings, drawSettings);
 
             //Callback
             AfterTransparentObject(camera,context);

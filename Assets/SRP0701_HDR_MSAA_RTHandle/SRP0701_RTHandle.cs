@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 [ExecuteInEditMode]
-public class SRP0701_RTHandle : RenderPipelineAsset
+public class SRP0701_RTHandle : RenderPipelineAsset<SRP0701_RTHandleInstance>
 {
     #if UNITY_EDITOR
     [UnityEditor.MenuItem("Assets/Create/Render Pipeline/SRP0701_RTHandle", priority = 1)]
@@ -89,7 +89,7 @@ public class SRP0701_RTHandleInstance : RenderPipeline
             FilteringSettings filterSettings = new FilteringSettings(RenderQueueRange.all);
 
             //Skybox
-            if(camera.clearFlags == CameraClearFlags.Skybox)  {  context.DrawSkybox(camera);  }
+            if(camera.clearFlags == CameraClearFlags.Skybox)  {  CustomSRPUtil.RenderSkybox(context, camera);  }
 
             //RendererList Opaque
             UnityEngine.Rendering.RendererUtils.RendererListDesc rendererDesc_Opaque = new UnityEngine.Rendering.RendererUtils.RendererListDesc(m_PassName,cull,camera);

@@ -9,12 +9,13 @@ using UnityEngine.Experimental.Rendering;
 // This pass renders objects into 2 RenderTargets:
 // Albedo - grey texture and the skybox
 // Emission - animated color
-public partial class SRP0802_RenderGraph
+public partial class SRP0802_RenderGraph_RasterCommandBuffer
 {
     ShaderTagId m_PassName1 = new ShaderTagId("SRP0802_Pass1"); //The shader pass tag just for SRP0802
 
     public class SRP0802_BasePassData
     {
+        public RendererList skyboxRenderList;
         public RendererListHandle m_renderList_opaque;
         public RendererListHandle m_renderList_transparent;
         public TextureHandle m_Albedo;
@@ -56,43 +57,44 @@ public partial class SRP0802_RenderGraph
         return graph.CreateTexture(colorRTDesc);
     }
 
-    public SRP0802_BasePassData Render_SRP0802_BasePass(Camera camera, RenderGraph graph, CullingResults cull)
+    public SRP0802_BasePassData Render_SRP0802_BasePass(Camera camera, RenderGraph graph, CullingResults cull, ScriptableRenderContext renderContext)
     {
-        using (var builder = graph.AddRenderPass<SRP0802_BasePassData>( "Base Pass", out var passData, new ProfilingSampler("Base Pass Profiler" ) ) )
+        using (var builder = graph.AddRasterRenderPass<SRP0802_BasePassData>( "Base Pass", out var passData, new ProfilingSampler("Base Pass Profiler" ) ) )
         {
             //Textures - Multi-RenderTarget
             TextureHandle Albedo = CreateColorTexture(graph,camera,"Albedo");
-            passData.m_Albedo = builder.UseColorBuffer(Albedo,0);
+            passData.m_Albedo = builder.UseTextureFragment(Albedo,0,IBaseRenderGraphBuilder.AccessFlags.Write);
             TextureHandle Emission = CreateColorTexture(graph,camera,"Emission");
-            passData.m_Emission = builder.UseColorBuffer(Emission,1);
+            passData.m_Emission = builder.UseTextureFragment(Emission,1,IBaseRenderGraphBuilder.AccessFlags.Write);
             TextureHandle Depth = CreateDepthTexture(graph,camera);
-            passData.m_Depth = builder.UseDepthBuffer(Depth, DepthAccess.Write);
+            passData.m_Depth = builder.UseTextureFragmentDepth(Depth, IBaseRenderGraphBuilder.AccessFlags.Write);
 
             //Renderers
             UnityEngine.Rendering.RendererUtils.RendererListDesc rendererDesc_base_Opaque = new UnityEngine.Rendering.RendererUtils.RendererListDesc(m_PassName1,cull,camera);
             rendererDesc_base_Opaque.sortingCriteria = SortingCriteria.CommonOpaque;
             rendererDesc_base_Opaque.renderQueueRange = RenderQueueRange.opaque;
-            RendererListHandle rHandle_base_Opaque = graph.CreateRendererList(rendererDesc_base_Opaque);
-            passData.m_renderList_opaque = builder.UseRendererList(rHandle_base_Opaque);
+            passData.m_renderList_opaque = graph.CreateRendererList(rendererDesc_base_Opaque);
+            builder.UseRendererList(passData.m_renderList_opaque);
 
             UnityEngine.Rendering.RendererUtils.RendererListDesc rendererDesc_base_Transparent = new UnityEngine.Rendering.RendererUtils.RendererListDesc(m_PassName1,cull,camera);
             rendererDesc_base_Transparent.sortingCriteria = SortingCriteria.CommonTransparent;
             rendererDesc_base_Transparent.renderQueueRange = RenderQueueRange.transparent;
-            RendererListHandle rHandle_base_Transparent= graph.CreateRendererList(rendererDesc_base_Transparent);
-            passData.m_renderList_transparent = builder.UseRendererList(rHandle_base_Transparent);
+            passData.m_renderList_transparent = graph.CreateRendererList(rendererDesc_base_Transparent);
+            builder.UseRendererList(passData.m_renderList_transparent);
+
+            passData.skyboxRenderList = renderContext.CreateSkyboxRendererList(camera);
             
             //Builder
-            builder.SetRenderFunc((SRP0802_BasePassData data, RenderGraphContext context) => 
+            builder.SetRenderFunc((SRP0802_BasePassData data, RasterGraphContext context) => 
             {
                 //Skybox - this will draw to the first target, i.e. Albedo
-                if(camera.clearFlags == CameraClearFlags.Skybox)  
-                {  
-                    RendererList rl = context.renderContext.CreateSkyboxRendererList(camera);
-                    context.cmd.DrawRendererList(rl);
+                if(camera.clearFlags == CameraClearFlags.Skybox)
+                {
+                    context.cmd.DrawRendererList(data.skyboxRenderList);
                 }
 
-                CoreUtils.DrawRendererList( context.renderContext, context.cmd, data.m_renderList_opaque );
-                CoreUtils.DrawRendererList( context.renderContext, context.cmd, data.m_renderList_transparent );
+                context.cmd.DrawRendererList(data.m_renderList_opaque);
+                context.cmd.DrawRendererList(data.m_renderList_transparent);
             });
 
             return passData;

@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 [ExecuteInEditMode]
-public class SRP0902 : RenderPipelineAsset
+public class SRP0902 : RenderPipelineAsset<SRP0902Instance>
 {
     #if UNITY_EDITOR
     [UnityEditor.MenuItem("Assets/Create/Render Pipeline/SRP0902", priority = 1)]
@@ -65,7 +65,10 @@ public class SRP0902Instance : RenderPipeline
             FilteringSettings filterSettings = new FilteringSettings(RenderQueueRange.all);
 
             //Skybox
-            if(drawSkyBox)  {  context.DrawSkybox(camera);  }
+            if(drawSkyBox)
+            {
+                CustomSRPUtil.RenderSkybox(context, camera);
+            }
 
             //SceneViewDrawMode
             #if UNITY_EDITOR
@@ -84,7 +87,7 @@ public class SRP0902Instance : RenderPipeline
                             overrideMaterialPassIndex = 0
                         };
                         debugSettings.SetShaderPassName(1, m_PassName);
-                        context.DrawRenderers(cull, ref debugSettings, ref filterSettings);
+                        CustomSRPUtil.RenderObjects("Render Debug Objects", context, cull, filterSettings, debugSettings);
                         context.Submit();
                         continue;
                     }
@@ -95,13 +98,13 @@ public class SRP0902Instance : RenderPipeline
             sortingSettings.criteria = SortingCriteria.CommonOpaque;
             drawSettings.sortingSettings = sortingSettings;
             filterSettings.renderQueueRange = RenderQueueRange.opaque;
-            context.DrawRenderers(cull, ref drawSettings, ref filterSettings);
+            CustomSRPUtil.RenderObjects("Render Opaque Objects", context, cull, filterSettings, drawSettings);
 
             //Transparent objects
             sortingSettings.criteria = SortingCriteria.CommonTransparent;
             drawSettings.sortingSettings = sortingSettings;
             filterSettings.renderQueueRange = RenderQueueRange.transparent;
-            context.DrawRenderers(cull, ref drawSettings, ref filterSettings);
+            CustomSRPUtil.RenderObjects("Render Transparent Objects", context, cull, filterSettings, drawSettings);
 
             context.Submit();
             

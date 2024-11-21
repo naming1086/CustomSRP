@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 [ExecuteInEditMode]
-public class SRP0302 : RenderPipelineAsset
+public class SRP0302 : RenderPipelineAsset<SRP0302Instance>
 {
     #if UNITY_EDITOR
     [UnityEditor.MenuItem("Assets/Create/Render Pipeline/SRP0302", priority = 1)]
@@ -65,13 +65,16 @@ public class SRP0302Instance : RenderPipeline
             GraphicsSettings.useScriptableRenderPipelineBatching = true;
 
             //Skybox
-            if(drawSkyBox)  {  context.DrawSkybox(camera);  }
+            if(drawSkyBox)
+            {
+                CustomSRPUtil.RenderSkybox(context, camera);
+            }
 
             //Opaque objects
             sortingSettings.criteria = SortingCriteria.CommonOpaque;
             drawSettings.sortingSettings = sortingSettings;
             filterSettings.renderQueueRange = RenderQueueRange.opaque;
-            context.DrawRenderers(cull, ref drawSettings, ref filterSettings);
+            CustomSRPUtil.RenderObjects("Render Opaque Objects", context, cull, filterSettings, drawSettings);
 
             context.Submit();
 
